@@ -18,7 +18,7 @@
 | `device-tree-compiler` (`dtc`) | разбор и сборка DTB |
 | `python3`, `zip`, `unzip` | сами скрипты и упаковка |
 | ARM GNU Toolchain `aarch64-none-linux-gnu` | сборка ядра |
-| Android NDK r27c | сборка `rgp2pad2` (не обязателен) |
+| Android NDK r27c | сборка прослойки `libbt-vendor.so` (`tools/build-btvendor.sh`) и `rgp2pad2` |
 
 Root **не нужен нигде.** Это осознанное ограничение: всё правится в файле
 образа через `debugfs`/`mtools`, а не монтированием.
@@ -89,7 +89,7 @@ Root **не нужен нигде.** Это осознанное огранич�
 
 | № | Инструмент | Что делает | Куда пишет |
 |---|---|---|---|
-| 1 | `patch-bt.sh` | Bluetooth: прослойка `libbt-vendor`, свойства профилей, снятие блокировки | p4, p5 |
+| 1 | `patch-bt.sh` | Bluetooth: прослойка `libbt-vendor` (собирается `tools/build-btvendor.sh`), свойства профилей, снятие блокировки | p4, p5 |
 | 2 | `patch-cmdline.py` | `ignore_loglevel loglevel=8` → `loglevel=4` | p3 |
 | 3 | `patch-timeout.py` | меню U-Boot 5 с → 1 с | p3 |
 | 4 | `patch-zram.py` | zram 50% → 100% ОЗУ | p5 |
