@@ -15,8 +15,10 @@ import subprocess, sys, os, shutil, tempfile
 
 A = "/mnt/t/Dump/RG52Mini/android/"
 OUT = "/home/mamaich/rg52/out-rg52/"
-SRC_IMG = A + "SyachOS-RG52Mini-V1.0.317m1.0.img"
-DST_IMG = A + "SyachOS-RG52Mini-V1.0.317m2.0.img"
+# Имена можно переопределить окружением: SRC_IMG=... DST_IMG=... — так этим же
+# скриптом собирается следующая версия поверх предыдущей.
+SRC_IMG = os.environ.get("SRC_IMG", A + "SyachOS-RG52Mini-V1.0.317m2.0.img")
+DST_IMG = os.environ.get("DST_IMG", A + "SyachOS-RG52Mini-V1.0.317m3.0.img")
 DTB = A + "rk3562-rg52mini-usb.dtb"
 P3_OFF, P3_LEN = 16777216, 103809024
 P5_OFF, P5_LEN = 1698693120, 267046912

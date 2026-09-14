@@ -4,7 +4,7 @@
 set -u
 A=/mnt/t/Dump/RG52Mini/android
 # Образ можно указать первым аргументом; по умолчанию — рабочий.
-IMG=${1:-$A/SyachOS-RG52Mini-V1.0.317m2.0.img}
+IMG=${1:-$A/SyachOS-RG52Mini-V1.0.317m3.0.img}
 B=$A/bt-payload
 T=$(mktemp -d); trap "rm -rf $T" EXIT
 P3_OFF=16777216;   P3_LEN=103809024
@@ -66,6 +66,14 @@ else
 '
 fi
 
+# Детекторы зависаний: khungtaskd — имя потока DETECT_HUNG_TASK, "soft lockup"
+# печатает SOFTLOCKUP_DETECTOR. Без них ядро при зависании молчит навсегда.
+if strings $T/kimg 2>/dev/null | grep -q "khungtaskd"; then
+  say y "ядро умеет замечать зависания (DETECT_HUNG_TASK)"
+  strings $T/kimg 2>/dev/null | grep -q "soft lockup" \
+    && say y "детектор softlockup" || say n "детектор softlockup"
+fi
+
 chk "$(dtc -I dtb -O dts -o - $T/dtb 2>/dev/null | grep -o 'spk-mute-delay-ms')" "spk-mute-delay-ms в DTB"
 chk "$(dtc -I dtb -O dts -o - $T/dtb 2>/dev/null | grep -o 'hynetek,husb311')" "контроллер Type-C в DTB (USB host)"
 d4 /system/bin/anim_fix.sh $T/af && chk "$(grep -c animator_duration_scale $T/af)" "скрипт anim_fix.sh (фризы интерфейса)" || say n "anim_fix.sh"
@@ -77,6 +85,17 @@ if [ -s $T/ovl.apk ] && cmp -s $T/ovl.apk $A/RG52MiniBtCodecOverlay.apk; then
   say y "оверлей: SBC кодеком по умолчанию"
 else
   say n "оверлей SBC"
+fi
+
+echo "== Демон геймпада"
+if d5 /bin/rgp2pad $T/rgp && grep -qa 'rgp2pad2:' $T/rgp; then
+  say y "наш демон rgp2pad2 стоит вместо авторского"
+  d5 /bin/rgp2pad.orig $T/x && say y "авторский сохранён как rgp2pad.orig" \
+                            || say n "rgp2pad.orig"
+  d5 /bin/rgp2pad-killall.sh $T/x && say y "скрипт rgp2pad-killall.sh на месте" \
+                                  || say n "rgp2pad-killall.sh"
+else
+  printf '  \033[36mИНФО\033[0m демон геймпада авторский\n'
 fi
 
 echo "== Целостность файловых систем"
