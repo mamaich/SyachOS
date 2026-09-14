@@ -544,7 +544,8 @@ static void handle_thumb(struct state *st, int pad_fd, int mouse_fd,
     }
 
     // отпускание
-    *self_down = 0;
+    int was_chord = st->chord_used;   // снять до сброса: стики могут отпускать
+    *self_down = 0;                   // в любом порядке
     if (!st->l3_down && !st->r3_down)
         st->chord_used = 0;
 
@@ -553,6 +554,8 @@ static void handle_thumb(struct state *st, int pad_fd, int mouse_fd,
         *self_fwd = 0;
         return;
     }
+    if (was_chord)                    // это половина аккорда, а не отдельное
+        return;                       // нажатие: ни щелчка, ни колеса
     if (!is_r3 || !st->mouse_mode)
         return;
 
@@ -670,8 +673,11 @@ static void mouse_tick(struct state *st, const struct curve *c, int mouse_fd,
     if (!st->mouse_mode)
         return;
 
-    // удержание R3 дольше порога — переходим в режим колеса
-    if (!st->scroll_mode && st->r3_down && st->r3_time
+    // Удержание R3 дольше порога — режим колеса. Но не тогда, когда R3 сейчас
+    // держат как половину аккорда L3+R3: аккорд и есть удержание обоих стиков,
+    // и без этой оговорки включение режима мыши тут же уводило в колесо —
+    // курсор появлялся и не двигался.
+    if (!st->scroll_mode && st->r3_down && st->r3_time && !st->chord_used
         && now - st->r3_time >= R3_CLICK_MS) {
         st->scroll_mode = 1;
         st->acc_wheel = 0.0f;
