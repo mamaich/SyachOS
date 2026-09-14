@@ -23,7 +23,11 @@ is not defined` и `CONFIG_SECURITY_SELINUX_SIDTAB_HASH_BITS undeclared`.
 
     scripts/extract-ikconfig .../boot/Image > shipped-kernel.config    # 7319 строк
 
-Лежит в `android/shipped-kernel.config`. Собирать надо им.
+Собирать надо им. Готовый результат уже есть: в
+[репозитории ядра](https://github.com/mamaich/kernel_rk3562_rg52mini)
+закоммичен рабочий `.config` — извлечённый авторский конфиг плюс наш
+`CONFIG_LOCALVERSION="-rg52mini"`. Отдельно извлекать нужно только при переходе
+на другую версию образа.
 
 При сборке снять `CONFIG_LOCALVERSION_AUTO=y`: у автора дерево было без `.git`
 и vermagic чистый `5.10.226`, а наш клон добавил бы суффикс `-g<hash>`.

@@ -54,7 +54,7 @@ DTS тоже правильный: `wifi_chip_type = "aic8800D80"`, `status = ok
 разбираются по SDIO-идентификаторам. Порядок важен: `bsp` перед `fdrv`.
 
 Правки внесены в раздел vendor через `debugfs -w` (root не нужен), раздел вписан
-обратно в образ: `SyachOS-RG52Mini-V1.0.317-aic8800-patched.img`.
+обратно в образ. Делает это `tools/patch-wifi.sh` (шаг 0 сборки), результат: `SyachOS-RG52Mini-V1.0.317-aic8800-patched.img`.
 
 
 ## Отладочный вывод драйвера Wi-Fi
