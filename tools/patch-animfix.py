@@ -14,7 +14,7 @@
 import subprocess, sys, os, tempfile
 
 A = "/mnt/t/Dump/RG52Mini/android/"
-IMG = A + "SyachOS-RG52Mini-V1.0.317-aic8800-wifi-bt.img"
+IMG = A + "SyachOS-RG52Mini-V1.0.317m1.0.img"
 SRC = A + "anim_fix.sh"
 P4_OFF, P4_LEN = 121634816, 1577058304
 RC = "/system/etc/init/init.perf.rc"

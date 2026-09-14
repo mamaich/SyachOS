@@ -15,7 +15,7 @@ rather than patched in place.
 import subprocess, sys, os, tempfile
 
 A = "/mnt/t/Dump/RG52Mini/android/"
-IMG = A + "SyachOS-RG52Mini-V1.0.317-aic8800-wifi-bt.img"
+IMG = A + "SyachOS-RG52Mini-V1.0.317m1.0.img"
 P5_OFF, P5_LEN = 1698693120, 267046912
 OLD = b"ro.audio.flinger_standbytime_ms=600000"
 NEW = b"ro.audio.flinger_standbytime_ms=3000"

@@ -15,8 +15,8 @@ import subprocess, sys, os, shutil, tempfile
 
 A = "/mnt/t/Dump/RG52Mini/android/"
 OUT = "/home/mamaich/rg52/out-rg52/"
-SRC_IMG = A + "SyachOS-RG52Mini-V1.0.317-aic8800-wifi-bt.img"
-DST_IMG = A + "SyachOS-RG52Mini-V1.0.317-aic8800-wifi-bt-usb.img"
+SRC_IMG = A + "SyachOS-RG52Mini-V1.0.317m1.0.img"
+DST_IMG = A + "SyachOS-RG52Mini-V1.0.317m2.0.img"
 DTB = A + "rk3562-rg52mini-usb.dtb"
 P3_OFF, P3_LEN = 16777216, 103809024
 P5_OFF, P5_LEN = 1698693120, 267046912

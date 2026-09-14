@@ -8,7 +8,7 @@
 # (Rockchip GPT type GUIDs are not "Microsoft basic data").
 
 param(
-    [string]$Image = 'T:\Dump\RG52Mini\android\SyachOS-RG52Mini-V1.0.317-aic8800-wifi-bt.img',
+    [string]$Image = 'T:\Dump\RG52Mini\android\SyachOS-RG52Mini-V1.0.317m1.0.img',
     [int]$Disk = -1
 )
 

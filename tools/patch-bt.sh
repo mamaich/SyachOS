@@ -4,7 +4,7 @@
 #
 # Вход:  SyachOS-RG52Mini-V1.0.317-20260707.img   (стоковый распакованный)
 #        bt-payload/                              (файлы, снятые с рабочего устройства)
-# Выход: SyachOS-RG52Mini-V1.0.317-aic8800-wifi-bt.img
+# Выход: SyachOS-RG52Mini-V1.0.317m1.0.img
 #
 # Правится два раздела: p4 system (system-as-root) и p5 vendor.
 # Смещения из GPT образа; при смене версии образа их надо перечитать.
@@ -12,7 +12,7 @@ set -e
 
 A=/mnt/t/Dump/RG52Mini/android
 BASE=$A/SyachOS-RG52Mini-V1.0.317-aic8800-patched.img   # уже с Wi-Fi
-OUT=$A/SyachOS-RG52Mini-V1.0.317-aic8800-wifi-bt.img
+OUT=$A/SyachOS-RG52Mini-V1.0.317m1.0.img
 P=$A/parts
 B=$A/bt-payload
 

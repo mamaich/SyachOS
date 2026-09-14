@@ -11,7 +11,7 @@ templates, so the whole line is matched, not just the option.
 """
 import subprocess, sys, tempfile, os
 
-IMG = "/mnt/t/Dump/RG52Mini/android/SyachOS-RG52Mini-V1.0.317-aic8800-wifi-bt.img"
+IMG = "/mnt/t/Dump/RG52Mini/android/SyachOS-RG52Mini-V1.0.317m1.0.img"
 P5_OFF, P5_LEN = 1698693120, 267046912
 FSTAB = "/etc/fstab.rk30board"
 

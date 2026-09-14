@@ -16,7 +16,7 @@ works if it is ever needed.
 import subprocess, sys, os, tempfile
 
 A = "/mnt/t/Dump/RG52Mini/android/"
-IMG = A + "SyachOS-RG52Mini-V1.0.317-aic8800-wifi-bt.img"
+IMG = A + "SyachOS-RG52Mini-V1.0.317m1.0.img"
 P5_OFF, P5_LEN = 1698693120, 267046912
 RC = "/etc/init/init.tee-supplicant.rc"
 

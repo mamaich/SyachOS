@@ -13,7 +13,7 @@ the author had it - both boot failures we saw came from touching those.
 import sys
 
 IMG = sys.argv[1] if len(sys.argv) > 1 else \
-    "/mnt/t/Dump/RG52Mini/android/SyachOS-RG52Mini-V1.0.317-aic8800-wifi-bt.img"
+    "/mnt/t/Dump/RG52Mini/android/SyachOS-RG52Mini-V1.0.317m1.0.img"
 P3_OFF, P3_LEN = 16777216, 103809024
 
 with open(IMG, "r+b") as f:

@@ -9,7 +9,7 @@ so it is replaced with mtools, which keeps the directory consistent.
 import subprocess, sys, os, tempfile
 
 A = "/mnt/t/Dump/RG52Mini/android/"
-IMG = A + "SyachOS-RG52Mini-V1.0.317-aic8800-wifi-bt.img"
+IMG = A + "SyachOS-RG52Mini-V1.0.317m1.0.img"
 P3_OFF, P3_LEN = 16777216, 103809024
 P5_OFF, P5_LEN = 1698693120, 267046912
 B = A + "bt-payload/"

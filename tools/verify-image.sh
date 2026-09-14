@@ -4,7 +4,7 @@
 set -u
 A=/mnt/t/Dump/RG52Mini/android
 # Образ можно указать первым аргументом; по умолчанию — рабочий.
-IMG=${1:-$A/SyachOS-RG52Mini-V1.0.317-aic8800-wifi-bt.img}
+IMG=${1:-$A/SyachOS-RG52Mini-V1.0.317m2.0.img}
 B=$A/bt-payload
 T=$(mktemp -d); trap "rm -rf $T" EXIT
 P3_OFF=16777216;   P3_LEN=103809024

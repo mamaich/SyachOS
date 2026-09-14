@@ -10,7 +10,7 @@ rk3562-rg52mini-spkdelay.dtb, то есть уже содержит spk-mute-del
 import subprocess, sys, os, tempfile
 
 A = "/mnt/t/Dump/RG52Mini/android/"
-IMG = A + "SyachOS-RG52Mini-V1.0.317-aic8800-wifi-bt.img"
+IMG = A + "SyachOS-RG52Mini-V1.0.317m1.0.img"
 DTB = A + "rk3562-rg52mini-typec.dtb"
 P3_OFF, P3_LEN = 16777216, 103809024
 
