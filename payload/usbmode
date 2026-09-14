@@ -1,0 +1,63 @@
+#!/system/bin/sh
+# Управление USB на RG52 Mini (Android).
+#
+#   usbmode status   - что сейчас: роли, режим, устройства, ток батареи
+#   usbmode sink     - запросить у партнёра смену роли питания (PR_Swap):
+#                      нужно с хабами, которые умеют питать устройство.
+#                      Мы остаёмся хостом, но начинаем заряжаться.
+#   usbmode source   - обратно: питать партнёра самим
+#   usbmode host     - принудительно режим хоста (в обход определения роли)
+#   usbmode device   - принудительно режим периферии: зарядка и adb по кабелю
+#   usbmode otg      - вернуть автоматическое определение (штатно)
+#
+# Определение роли работает само: в device tree возвращён контроллер Type-C
+# HUSB311. Принудительные режимы нужны разве что для устройств, которые
+# неправильно тянут линии CC.
+#
+# ВАЖНО: в режиме host устройство САМО подаёт 5 В и не заряжается.
+P=/sys/class/typec/port0
+M=/sys/devices/platform/ff740000.usb2-phy/otg_mode
+
+show() {
+    [ -d $P ] && {
+        echo "роль данных:  $(cat $P/data_role 2>/dev/null)"
+        echo "роль питания: $(cat $P/power_role 2>/dev/null)"
+        echo "режим:        $(cat $P/power_operation_mode 2>/dev/null)"
+    }
+    echo "usb2-phy:     $(cat $M 2>/dev/null)"
+    echo "extcon:       $(cat /sys/class/extcon/extcon0/state 2>/dev/null | tr '\n' ' ')"
+    S=/sys/class/power_supply/tcpm-source-psy-2-004e
+    [ -f $S/online ] && [ "$(cat $S/online)" = 1 ] && \
+        echo "источник PD:  $(( $(cat $S/voltage_max)/1000 )) мВ / $(( $(cat $S/current_max)/1000 )) мА"
+    n=0
+    for d in /sys/bus/usb/devices/*/; do
+        [ -f "$d/idVendor" ] || continue
+        v=$(cat $d/idVendor); [ "$v" = 1d6b ] && continue
+        echo "  подключено: $v:$(cat $d/idProduct) $(cat $d/product 2>/dev/null)"
+        n=$((n+1))
+    done
+    [ "$n" = 0 ] && echo "  устройств нет"
+    b=$(cat /sys/class/power_supply/battery/current_now 2>/dev/null)
+    [ -n "$b" ] && echo "ток батареи:  $((b/1000)) мА  ($(cat /sys/class/power_supply/battery/capacity)%)"
+}
+
+setrole() {   # $1 = sink|source
+    [ -d $P ] || { echo "контроллер Type-C не найден"; exit 1; }
+    if echo "$1" > $P/power_role 2>/dev/null; then
+        sleep 3
+        echo "запрос отправлен, стало: $(cat $P/power_role)"
+    else
+        echo "партнёр отказал в смене роли (или не умеет PD)"
+    fi
+    show
+}
+
+case "$1" in
+  sink|charge)   setrole sink ;;
+  source)        setrole source ;;
+  host)          echo host > $M       && sleep 2 && show ;;
+  device|peripheral) echo peripheral > $M && sleep 2 && show ;;
+  otg)           echo otg > $M        && sleep 2 && show ;;
+  status|"")     show ;;
+  *) echo "usbmode status | sink | source | host | device | otg"; exit 1 ;;
+esac
