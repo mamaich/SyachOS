@@ -54,10 +54,10 @@ mtype -i $T/p3 ::/extlinux/extlinux.conf > $T/x 2>/dev/null
 chk "$(grep -o 'loglevel=5' $T/x)" "loglevel=5 (иначе fbcon гасит логотип)"
 if grep -q 'ignore_loglevel' $T/x; then say n "ignore_loglevel убран"; else say y "ignore_loglevel убран"; fi
 chk "$(grep -o '^TIMEOUT 10' $T/x)" "TIMEOUT 10 (меню U-Boot 1 с)"
-# Про консоль: U-Boot всё равно подставляет свой console=ttyFIQ0 вместо
-# первого найденного, поэтому проверять тут нечего — смотреть надо
-# /proc/cmdline на живом устройстве. Оставлена только запись факта.
-chk "$(grep -o 'console=tty1' $T/x)" "console=tty1 в строке (U-Boot подменит на ttyFIQ0)"
+# Единственная console= в строке: U-Boot подменит её на свой ttyFIQ0, и
+# экранной консоли не останется — логотип не будет залит текстом.
+chk "$(grep -o 'console=tty1' $T/x)" "одна console=tty1 (экранной консоли не будет)"
+if grep -q 'ttyFIQ0\|earlycon' $T/x; then say n "ttyFIQ0/earlycon убраны из строки"; else say y "ttyFIQ0/earlycon убраны из строки"; fi
 mtype -i $T/p3 ::/rk3562-rg52mini.dtb > $T/dtb 2>/dev/null
 mtype -i $T/p3 ::/Image > $T/kimg 2>/dev/null
 if strings $T/kimg 2>/dev/null | grep -q "loa filter"; then
@@ -111,10 +111,13 @@ idb=$(dd if=$IMG bs=512 skip=64 count=16320 2>/dev/null | tr -d '\000' | wc -c)
                       || say n "SPL (область пуста — карта не загрузится сама)"
 # Строка вида: U-Boot 2017.09-g034a996-dirty #lw (Jul 10 2026 - 15:04:24 +0800)
 ub=$(dd if=$IMG bs=512 skip=16384 count=8192 2>/dev/null | strings      | grep -m1 -oE 'U-Boot 2[0-9]{3}\.[0-9]{2}[^)]*\)')
+# FIT с eMMC (сборка 2026 года) лечит зависание при включении с USB, но ломает
+# выключение: PMIC делает сброс вместо снятия питания. Поэтому в образе должен
+# остаться авторский FIT — см. docs/12-bootloader.md.
 if [ -n "$ub" ]; then
   case "$ub" in
-    *2026*) say y "U-Boot: $ub" ;;
-    *)      say n "U-Boot старый: $ub" ;;
+    *2026*) say n "в образе FIT с eMMC ($ub) — он ломает выключение" ;;
+    *)      say y "FIT авторский: $ub" ;;
   esac
 else
   say n "U-Boot в разделе не опознан"
