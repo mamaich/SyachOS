@@ -4,7 +4,7 @@
 set -u
 A=/mnt/t/Dump/RG52Mini/android
 # Образ можно указать первым аргументом; по умолчанию — рабочий.
-IMG=${1:-$A/SyachOS-RG52Mini-V1.0.317m3.0.img}
+IMG=${1:-$A/SyachOS-RG52Mini-V1.0.317m4.0.img}
 B=$A/bt-payload
 T=$(mktemp -d); trap "rm -rf $T" EXIT
 P3_OFF=16777216;   P3_LEN=103809024
@@ -54,6 +54,8 @@ mtype -i $T/p3 ::/extlinux/extlinux.conf > $T/x 2>/dev/null
 chk "$(grep -o 'loglevel=4' $T/x)" "loglevel=4"
 if grep -q 'ignore_loglevel' $T/x; then say n "ignore_loglevel убран"; else say y "ignore_loglevel убран"; fi
 chk "$(grep -o '^TIMEOUT 10' $T/x)" "TIMEOUT 10 (меню U-Boot 1 с)"
+if grep -q 'ttyFIQ0\|earlycon' $T/x; then say n "консоль ядра в UART убрана"; else say y "консоль ядра в UART убрана"; fi
+chk "$(grep -o 'console=tty1' $T/x)" "console=tty1 оставлен (паника видна на экране)"
 mtype -i $T/p3 ::/rk3562-rg52mini.dtb > $T/dtb 2>/dev/null
 mtype -i $T/p3 ::/Image > $T/kimg 2>/dev/null
 if strings $T/kimg 2>/dev/null | grep -q "loa filter"; then
@@ -70,6 +72,11 @@ fi
 # печатает SOFTLOCKUP_DETECTOR. Без них ядро при зависании молчит навсегда.
 if strings $T/kimg 2>/dev/null | grep -q "khungtaskd"; then
   say y "ядро умеет замечать зависания (DETECT_HUNG_TASK)"
+  # Отключённое оставляет пустоту: строки этих подсистем должны исчезнуть.
+  if strings $T/kimg 2>/dev/null | grep -q "CRED: Invalid credentials"; then
+    say n "DEBUG_CREDENTIALS выключен"; else say y "DEBUG_CREDENTIALS выключен"; fi
+  if strings $T/kimg 2>/dev/null | grep -q "usercopy:"; then
+    say n "HARDENED_USERCOPY выключен"; else say y "HARDENED_USERCOPY выключен"; fi
   strings $T/kimg 2>/dev/null | grep -q "soft lockup" \
     && say y "детектор softlockup" || say n "детектор softlockup"
 fi
@@ -85,6 +92,13 @@ if [ -s $T/ovl.apk ] && cmp -s $T/ovl.apk $A/RG52MiniBtCodecOverlay.apk; then
   say y "оверлей: SBC кодеком по умолчанию"
 else
   say n "оверлей SBC"
+fi
+
+echo "== Мелочи скорости"
+if d4 /system/etc/init/atrace.rc $T/at; then
+  chk "$(grep -o 'sched_schedstats 0' $T/at)" "счётчики планировщика не включаются при загрузке"
+else
+  say n "atrace.rc"
 fi
 
 echo "== Демон геймпада"
