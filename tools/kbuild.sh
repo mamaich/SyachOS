@@ -13,7 +13,17 @@ echo "=== сборка Image и модулей"
 # DTB обязательно указывать явно: "make Image modules" device tree НЕ
 # собирает, и в out-* остаётся устаревший файл от прошлой сборки.
 # Именно наш DTB, а не dtbs — иначе собираются деревья всех плат Rockchip.
+# Провал сборки обязан останавливать скрипт. Без pipefail код возврата берётся
+# от tail, и при ошибке компиляции в out-* тихо копировался бы Image от прошлого
+# прохода — однажды именно так и вышло.
+set -o pipefail
 make -j"$(nproc)" Image modules rockchip/rk3562-rg52mini.dtb 2>&1 | tail -8
+set +o pipefail
+[ -f arch/arm64/boot/Image ] || { echo "!! Image не собрался"; exit 1; }
+if [ arch/arm64/boot/Image -ot .config ]; then
+  echo "!! Image старше .config — сборка не прошла, прежний файл не отдаю"
+  exit 1
+fi
 echo
 echo "=== собранное"
 cp arch/arm64/boot/Image $O/

@@ -4,7 +4,7 @@
 set -u
 A=/mnt/t/Dump/RG52Mini/android
 # Образ можно указать первым аргументом; по умолчанию — рабочий.
-IMG=${1:-$A/SyachOS-RG52Mini-V1.0.317m4.0.img}
+IMG=${1:-$A/SyachOS-RG52Mini-V1.0.317m5.0.img}
 B=$A/bt-payload
 T=$(mktemp -d); trap "rm -rf $T" EXIT
 P3_OFF=16777216;   P3_LEN=103809024
@@ -51,11 +51,13 @@ if grep -q '^#   start tee-supplicant' $T/x; then say y "tee-supplicant: явн�
 # одного комментария мало: class core поднимается через class_start
 if grep -q '^    disabled$' $T/x; then say y "tee-supplicant: disabled (иначе поднимет class_start core)"; else say n "tee-supplicant: disabled"; fi
 mtype -i $T/p3 ::/extlinux/extlinux.conf > $T/x 2>/dev/null
-chk "$(grep -o 'loglevel=4' $T/x)" "loglevel=4"
+chk "$(grep -o 'loglevel=5' $T/x)" "loglevel=5 (иначе fbcon гасит логотип)"
 if grep -q 'ignore_loglevel' $T/x; then say n "ignore_loglevel убран"; else say y "ignore_loglevel убран"; fi
 chk "$(grep -o '^TIMEOUT 10' $T/x)" "TIMEOUT 10 (меню U-Boot 1 с)"
-if grep -q 'ttyFIQ0\|earlycon' $T/x; then say n "консоль ядра в UART убрана"; else say y "консоль ядра в UART убрана"; fi
-chk "$(grep -o 'console=tty1' $T/x)" "console=tty1 оставлен (паника видна на экране)"
+# Про консоль: U-Boot всё равно подставляет свой console=ttyFIQ0 вместо
+# первого найденного, поэтому проверять тут нечего — смотреть надо
+# /proc/cmdline на живом устройстве. Оставлена только запись факта.
+chk "$(grep -o 'console=tty1' $T/x)" "console=tty1 в строке (U-Boot подменит на ttyFIQ0)"
 mtype -i $T/p3 ::/rk3562-rg52mini.dtb > $T/dtb 2>/dev/null
 mtype -i $T/p3 ::/Image > $T/kimg 2>/dev/null
 if strings $T/kimg 2>/dev/null | grep -q "loa filter"; then
@@ -72,6 +74,12 @@ fi
 # печатает SOFTLOCKUP_DETECTOR. Без них ядро при зависании молчит навсегда.
 if strings $T/kimg 2>/dev/null | grep -q "khungtaskd"; then
   say y "ядро умеет замечать зависания (DETECT_HUNG_TASK)"
+  # Логотип виден по таблице цветов: 224 записи подряд в .data ядра не
+  # отличить надёжно, поэтому смотрим на размер — картинка 1280x720 весит
+  # ровно 900 КБ и без неё Image заметно меньше.
+  ksz=$(stat -c %s $T/kimg)
+  [ "$ksz" -gt 44500000 ] && say y "в ядре есть логотип загрузки (Image $ksz)" \
+                          || say n "логотип в ядре (Image $ksz — маловат)"
   # Отключённое оставляет пустоту: строки этих подсистем должны исчезнуть.
   if strings $T/kimg 2>/dev/null | grep -q "CRED: Invalid credentials"; then
     say n "DEBUG_CREDENTIALS выключен"; else say y "DEBUG_CREDENTIALS выключен"; fi
@@ -92,6 +100,24 @@ if [ -s $T/ovl.apk ] && cmp -s $T/ovl.apk $A/RG52MiniBtCodecOverlay.apk; then
   say y "оверлей: SBC кодеком по умолчанию"
 else
   say n "оверлей SBC"
+fi
+
+echo "== Загрузчик"
+# Область idbloader в авторском образе пуста: карта не была загрузочной сама
+# по себе. С загрузчиком, снятым с eMMC, пропало зависание при включении
+# с воткнутым USB.
+idb=$(dd if=$IMG bs=512 skip=64 count=16320 2>/dev/null | tr -d '\000' | wc -c)
+[ "$idb" -gt 100000 ] && say y "SPL на месте ($idb байт данных)" \
+                      || say n "SPL (область пуста — карта не загрузится сама)"
+# Строка вида: U-Boot 2017.09-g034a996-dirty #lw (Jul 10 2026 - 15:04:24 +0800)
+ub=$(dd if=$IMG bs=512 skip=16384 count=8192 2>/dev/null | strings      | grep -m1 -oE 'U-Boot 2[0-9]{3}\.[0-9]{2}[^)]*\)')
+if [ -n "$ub" ]; then
+  case "$ub" in
+    *2026*) say y "U-Boot: $ub" ;;
+    *)      say n "U-Boot старый: $ub" ;;
+  esac
+else
+  say n "U-Boot в разделе не опознан"
 fi
 
 echo "== Мелочи скорости"

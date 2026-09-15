@@ -1,7 +1,7 @@
 set -e
 cd /mnt/t/Dump/RG52Mini/android
 # Образ можно указать аргументом; по умолчанию — базовый.
-N=${1:-SyachOS-RG52Mini-V1.0.317m4.0.img}
+N=${1:-SyachOS-RG52Mini-V1.0.317m5.0.img}
 echo "образ: $(stat -c %s $N) байт"
 sha256sum $N > $N.sha256
 cat $N.sha256
