@@ -4,7 +4,7 @@
 set -u
 A=/mnt/t/Dump/RG52Mini/android
 # Образ можно указать первым аргументом; по умолчанию — рабочий.
-IMG=${1:-$A/SyachOS-RG52Mini-V1.0.317m5.0.img}
+IMG=${1:-$A/SyachOS-RG52Mini-V1.0.317m6.0.img}
 B=$A/bt-payload
 T=$(mktemp -d); trap "rm -rf $T" EXIT
 P3_OFF=16777216;   P3_LEN=103809024
@@ -110,17 +110,33 @@ idb=$(dd if=$IMG bs=512 skip=64 count=16320 2>/dev/null | tr -d '\000' | wc -c)
 [ "$idb" -gt 100000 ] && say y "SPL на месте ($idb байт данных)" \
                       || say n "SPL (область пуста — карта не загрузится сама)"
 # Строка вида: U-Boot 2017.09-g034a996-dirty #lw (Jul 10 2026 - 15:04:24 +0800)
-ub=$(dd if=$IMG bs=512 skip=16384 count=8192 2>/dev/null | strings      | grep -m1 -oE 'U-Boot 2[0-9]{3}\.[0-9]{2}[^)]*\)')
-# FIT с eMMC (сборка 2026 года) лечит зависание при включении с USB, но ломает
-# выключение: PMIC делает сброс вместо снятия питания. Поэтому в образе должен
-# остаться авторский FIT — см. docs/12-bootloader.md.
-if [ -n "$ub" ]; then
+dd if=$IMG bs=512 skip=16384 count=8192 of=$T/ub 2>/dev/null
+ub=$(strings $T/ub | grep -m1 -oE 'U-Boot 2[0-9]{3}\.[0-9]{2}[^)]*\)')
+# Опознаём загрузчик по модели в его дереве, а не по дате: у нашей сборки
+# там «AISLPC RG52 Mini», у заводских — отладочная плата Rockchip. Заводской
+# с eMMC ломает выключение, авторский работает — см. docs/12-bootloader.md.
+if grep -qa 'AISLPC RG52 Mini' $T/ub; then
+  # строки-баннера с версией в нашей сборке нет, опознаём по дереву
+  say y "FIT нашей сборки (дерево AISLPC RG52 Mini)"
+elif [ -n "$ub" ]; then
   case "$ub" in
     *2026*) say n "в образе FIT с eMMC ($ub) — он ломает выключение" ;;
     *)      say y "FIT авторский: $ub" ;;
   esac
 else
   say n "U-Boot в разделе не опознан"
+fi
+
+echo "== Выключение"
+if d4 /system/etc/init/vold.rc $T/vold; then
+  if grep -qa 'reboot_on_failure' $T/vold; then
+    say n "у vold убран reboot_on_failure (иначе выключение = перезагрузка)"
+  else
+    say y "у vold убран reboot_on_failure"
+  fi
+  chk "$(grep -o 'shutdown critical' $T/vold)" "shutdown critical у vold сохранён"
+else
+  say n "vold.rc"
 fi
 
 echo "== Мелочи скорости"
