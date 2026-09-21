@@ -36,7 +36,14 @@ d5 /lib64/libbt-vendor.so $T/x;  [ "$(stat -c %s $T/x 2>/dev/null)" = 10056 ] &&
 d5 /lib64/libbt-vendor-seekwave.so $T/x; [ "$(stat -c %s $T/x 2>/dev/null)" = 10056 ] && say y "libbt-vendor-seekwave.so — наша прослойка" || say n "libbt-vendor-seekwave.so"
 d5 /lib64/libbt-vendor.so.orig $T/x && say y "оригинал сохранён как .orig" || say n ".orig"
 chk "$(debugfs -R 'ls /etc/firmware/aic8800' $T/p5 2>/dev/null | grep -o fmacfwbt_8800d80_h_u02.bin)" "блобы D80 на месте (комбо-прошивка BT)"
-d5 /etc/init.insmod.cfg $T/x; chk "$(grep -c 'aic8800_' $T/x | grep 2)" "две строки insmod aic8800"
+# Обе строки insmod aic8800 должны быть ЗАКОММЕНТИРОВАНЫ: драйвер выбирается
+# по факту железа, иначе на ревизии A оба чипа дерутся за общее питание.
+# Старая проверка считала строки не глядя на комментарий и была бесполезна.
+d5 /etc/init.insmod.cfg $T/x
+chk "$(grep -c '^#insmod .*aic8800_' $T/x | grep 2)" "обе строки insmod aic8800 закомментированы"
+if grep -qE '^[^#]*insmod .*aic8800_' $T/x; then say n "незакомментированный insmod aic8800 (сломает ревизию A)"; else say y "незакомментированного insmod aic8800 нет"; fi
+d5 /bin/wifi_pick.sh $T/x && chk "$(grep -c 'aic8800_bsp' $T/x)" "wifi_pick.sh — выбор драйвера по факту железа" || say n "wifi_pick.sh"
+d5 /etc/init/rg52-wifi.rc $T/x && chk "$(grep -c 'vendor.all.modules.ready' $T/x)" "служба rg52_wifi_pick по готовности модулей" || say n "rg52-wifi.rc"
 d4 /system/etc/sysconfig/rg52-no-tv.xml $T/x
 if grep -q 'hardware.bluetooth' $T/x; then say n "блокировка возможности BT снята"; else say y "блокировка возможности BT снята"; fi
 
@@ -69,6 +76,27 @@ else
   printf '  [36mИНФО[0m ядро авторское, без фильтра babble
 '
 fi
+# Эти два свойства нужны независимо от того, чьё ядро в образе.
+chk "$(dtc -I dtb -O dts -o - $T/dtb 2>/dev/null | grep -o 'husb311')" "контроллер Type-C HUSB311 в DTB (без него нет USB host)"
+chk "$(dtc -I dtb -O dts -o - $T/dtb 2>/dev/null | grep -o 'spk-mute-delay-ms')" "задержка отключения динамика в DTB (щелчки звука)"
+
+# KernelSU: номер версии не вычисляется сам — у вкопированного KernelSU-Next
+# нет своей истории git, и номер зашит запасным значением в
+# drivers/kernelsu/Kbuild. Ядро, собранное без него, снаружи выглядит
+# нормально, но управляющее приложение видит версию 0.0.1 и прав не даёт.
+# Тег рядом с номером — единственный признак, видимый в двоичном файле.
+ktag=$(strings $T/kimg 2>/dev/null | grep -oE 'v3\.[0-9]+\.[0-9]+' | sort -u | head -1)
+if [ -n "$ktag" ]; then
+  say y "KernelSU собран с номером версии ($ktag)"
+else
+  say n "в ядре нет тега версии KernelSU — приложение увидит 0.0.1 и прав не даст"
+fi
+# Самая надёжная проверка: ядро в образе — ровно то, что лежит в сборке.
+# Именно рассинхрон здесь один раз и вернул версию KernelSU к 0.0.1: правку
+# накатили на устройство, а в образ ядро положить забыли.
+if [ -f $KBUILD/Image ]; then
+  cmp -s $T/kimg $KBUILD/Image && say y "ядро в образе совпадает со сборкой ($KBUILD)"                               || say n "ядро в образе НЕ из текущей сборки — пересоберите образ"
+fi
 
 # Детекторы зависаний: khungtaskd — имя потока DETECT_HUNG_TASK, "soft lockup"
 # печатает SOFTLOCKUP_DETECTOR. Без них ядро при зависании молчит навсегда.
@@ -93,6 +121,9 @@ chk "$(dtc -I dtb -O dts -o - $T/dtb 2>/dev/null | grep -o 'spk-mute-delay-ms')"
 chk "$(dtc -I dtb -O dts -o - $T/dtb 2>/dev/null | grep -o 'hynetek,husb311')" "контроллер Type-C в DTB (USB host)"
 d4 /system/bin/anim_fix.sh $T/af && chk "$(grep -c animator_duration_scale $T/af)" "скрипт anim_fix.sh (фризы интерфейса)" || say n "anim_fix.sh"
 d4 /system/etc/init/init.perf.rc $T/rc && chk "$(grep -c "start anim_fix" $T/rc)" "запуск anim_fix по sys.boot_completed" || say n "init.perf.rc"
+# Важно именно значение: при нуле фризов нет, но пропадает видимый ход
+# выполнения — в маркетплейсах не рисуется полоса установки apk.
+chk "$(grep -o 'SCALE=0.25' $T/af)" "скорость анимации 0.25 (не ноль — иначе не виден прогресс)"
 d4 /system/bin/usbmode $T/usbmode
 if [ -s $T/usbmode ] && cmp -s $T/usbmode $A/usbmode; then say y "утилита usbmode"; else say n "usbmode"; fi
 d4 /system/product/overlay/RG52MiniBtCodecOverlay.apk $T/ovl.apk
@@ -101,6 +132,23 @@ if [ -s $T/ovl.apk ] && cmp -s $T/ovl.apk $A/RG52MiniBtCodecOverlay.apk; then
 else
   say n "оверлей SBC"
 fi
+
+echo "== Логотип загрузчика"
+# U-Boot рисует logo.bmp сам, ядро подхватывает уже включённый экран и своей
+# инициализации не делает. Если рядом лежит logo_kernel.bmp, ядро рисует ещё
+# и его — и после этого экран гаснет насовсем: подсветка горит, Android
+# рисует кадры, а панель тёмная, пока не усыпить и не разбудить устройство.
+# Проверено на живом устройстве 21.09.2026 — см. docs/11-boot-logo.md.
+mdir -b -i $T/p3 ::/ > $T/p3ls 2>/dev/null
+if grep -qi '^::/logo_kernel.bmp$' $T/p3ls; then
+  say n "logo_kernel.bmp НЕ должен лежать в образе (гасит экран после загрузки)"
+else
+  say y "logo_kernel.bmp отсутствует"
+fi
+chk "$(grep -i '^::/logo.bmp$' $T/p3ls)" "logo.bmp на месте"
+n=$(grep -ci '^::/battery_[0-5].bmp$' $T/p3ls)
+[ "$n" = 6 ] && say y "шесть кадров battery_0..5.bmp" || say n "кадров battery_*.bmp: $n из 6"
+chk "$(grep -i '^::/battery_fail.bmp$' $T/p3ls)" "battery_fail.bmp на месте"
 
 echo "== Загрузчик"
 # Область idbloader в авторском образе пуста: карта не была загрузочной сама
@@ -138,6 +186,22 @@ if d4 /system/etc/init/vold.rc $T/vold; then
 else
   say n "vold.rc"
 fi
+chk "$(grep -o '^ro.build.shutdown_timeout=2$' $T/bp)" "таймаут выключения 2 с (умолчание 6)"
+
+echo "== Клавиатура и метод ввода"
+d4 /system/app/LeanKeyKeyboard/LeanKeyKeyboard.apk $T/lk
+[ "$(stat -c %s $T/lk 2>/dev/null)" = 1485990 ] && say y "LeanKey 6.1.13 в /system/app"                                                 || say n "LeanKey в /system/app"
+d4 /system/bin/ime_fix.sh $T/if && chk "$(grep -c default_input_method $T/if)" "скрипт ime_fix.sh (метод ввода слетает при загрузке)" || say n "ime_fix.sh"
+d4 /system/etc/init/init.perf.rc $T/rc2 && chk "$(grep -c 'start ime_fix' $T/rc2)" "запуск ime_fix по sys.boot_completed" || say n "init.perf.rc"
+
+echo "== Управляющее приложение KernelSU"
+# В /system/app класть нельзя: ядро ищет управляющее приложение только в
+# /data/app (throne_tracker.c), оттуда бы оно его не нашло и root не работал
+# бы. Поэтому apk лежит в /system/etc/rg52 и ставится при первой загрузке.
+d4 /system/etc/rg52/KernelSUNext.apk $T/ksu
+[ "$(stat -c %s $T/ksu 2>/dev/null)" = 10209942 ] && say y "KernelSU Next v3.3.0 (33214) в образе"                                                   || say n "apk KernelSU Next"
+d4 /system/bin/ksu_install.sh $T/ki && chk "$(grep -c 'com.rifsxd.ksunext' $T/ki)" "скрипт ksu_install.sh" || say n "ksu_install.sh"
+chk "$(grep -c 'start ksu_install' $T/rc2)" "запуск ksu_install по sys.boot_completed"
 
 echo "== Мелочи скорости"
 if d4 /system/etc/init/atrace.rc $T/at; then
